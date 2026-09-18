@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -41,6 +40,37 @@ export default function SettingsPage() {
           return;
         }
 
+        // -----------------------------
+        // CHECK USER PROFILE
+        // -----------------------------
+        const {
+          data: profileAccess,
+          error: profileAccessError,
+        } = await supabase
+          .from("profiles")
+          .select("role, active")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileAccessError) {
+          throw profileAccessError;
+        }
+
+        // Inactive or missing profile
+        if (!profileAccess || !profileAccess.active) {
+          window.location.href = "/login";
+          return;
+        }
+
+        // Settings are admin-only
+        if (profileAccess.role !== "admin") {
+          window.location.href = "/";
+          return;
+        }
+
+        // -----------------------------
+        // LOAD ADMIN PROFILE
+        // -----------------------------
         const { data, error: profileError } =
           await supabase
             .from("profiles")
@@ -90,6 +120,35 @@ export default function SettingsPage() {
         return;
       }
 
+      // -----------------------------
+      // VERIFY ADMIN BEFORE SAVING
+      // -----------------------------
+      const {
+        data: profileAccess,
+        error: profileAccessError,
+      } = await supabase
+        .from("profiles")
+        .select("role, active")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileAccessError) {
+        throw profileAccessError;
+      }
+
+      if (!profileAccess || !profileAccess.active) {
+        window.location.href = "/login";
+        return;
+      }
+
+      if (profileAccess.role !== "admin") {
+        window.location.href = "/";
+        return;
+      }
+
+      // -----------------------------
+      // UPDATE PROFILE
+      // -----------------------------
       const { error: updateError } =
         await supabase
           .from("profiles")
@@ -298,4 +357,3 @@ export default function SettingsPage() {
     </main>
   );
 }
-

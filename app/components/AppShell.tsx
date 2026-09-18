@@ -1,9 +1,14 @@
-
-
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import LogoutButton from "./LogoutButton";
+import { createClient } from "@/lib/supabase/client";
+
+type Profile = {
+  full_name: string | null;
+  role: "admin" | "worker";
+};
 
 export default function AppShell({
   children,
@@ -11,11 +16,52 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const supabase = createClient();
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          setLoadingProfile(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("full_name, role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error("PROFILE ERROR:", error);
+          setLoadingProfile(false);
+          return;
+        }
+
+        setProfile(data);
+      } catch (error) {
+        console.error("PROFILE LOAD ERROR:", error);
+      } finally {
+        setLoadingProfile(false);
+      }
+    }
+
+    loadProfile();
+  }, [supabase]);
 
   // Login page gets no sidebar or top bar
   if (pathname === "/login") {
     return <>{children}</>;
   }
+
+  const isAdmin = profile?.role === "admin";
 
   return (
     <div className="flex min-h-screen">
@@ -77,27 +123,32 @@ export default function AppShell({
             Payment Schedule
           </a>
 
-          <div className="my-4 border-t border-gray-200" />
+          {/* Admin-only navigation */}
+          {isAdmin && (
+            <>
+              <div className="my-4 border-t border-gray-200" />
 
-          <p className="px-4 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
-            Management
-          </p>
+              <p className="px-4 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Management
+              </p>
 
-          <a
-            href="/reports"
-            className="flex items-center rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-          >
-            <span className="mr-3 text-lg">📊</span>
-            Reports
-          </a>
+              <a
+                href="/reports"
+                className="flex items-center rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              >
+                <span className="mr-3 text-lg">📊</span>
+                Reports
+              </a>
 
-          <a
-            href="/settings"
-            className="flex items-center rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-          >
-            <span className="mr-3 text-lg">⚙</span>
-            Settings
-          </a>
+              <a
+                href="/settings"
+                className="flex items-center rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              >
+                <span className="mr-3 text-lg">⚙</span>
+                Settings
+              </a>
+            </>
+          )}
 
         </nav>
 
@@ -126,16 +177,22 @@ export default function AppShell({
 
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-semibold text-gray-900">
-                  Administrator
+                  {loadingProfile
+                    ? "Loading..."
+                    : profile?.full_name || "User"}
                 </p>
 
-                <p className="text-xs text-gray-500">
-                  Admin
+                <p className="text-xs capitalize text-gray-500">
+                  {loadingProfile
+                    ? ""
+                    : profile?.role || ""}
                 </p>
               </div>
 
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-sm font-bold text-white">
-                A
+                {profile?.full_name
+                  ? profile.full_name.charAt(0).toUpperCase()
+                  : "U"}
               </div>
 
             </div>

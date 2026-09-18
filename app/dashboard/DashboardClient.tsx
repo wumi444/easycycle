@@ -130,14 +130,14 @@ export default function DashboardClient() {
       /*
        * Profile
        */
-      const {
-        data: profile,
-        error: profileError,
-      } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .maybeSingle();
+     const {
+  data: profile,
+  error: profileError,
+} = await supabase
+  .from("profiles")
+  .select("full_name, role, active")
+  .eq("id", user.id)
+  .maybeSingle();
 
       if (profileError) {
         throw profileError;

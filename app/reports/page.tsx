@@ -65,14 +65,35 @@ export default function ReportsPage() {
       const supabase = createClient();
 
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+       const {
+  data: { user },
+} = await supabase.auth.getUser();
 
-        if (!user) {
-          window.location.href = "/login";
-          return;
-        }
+if (!user) {
+  window.location.href = "/login";
+  return;
+}
+
+const { data: profile, error: profileError } =
+  await supabase
+    .from("profiles")
+    .select("role, active")
+    .eq("id", user.id)
+    .maybeSingle();
+
+if (profileError) {
+  throw profileError;
+}
+
+if (!profile || !profile.active) {
+  window.location.href = "/login";
+  return;
+}
+
+if (profile.role !== "admin") {
+  window.location.href = "/";
+  return;
+}
 
         // -----------------------------
         // LOAD LOANS
